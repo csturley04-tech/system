@@ -6,18 +6,32 @@
 <meta name="theme-color" content="#0e0d16">
 <title>System</title>
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./icon-192.png">
-<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" href="./icon-192-v2.png">
+<link rel="apple-touch-icon" href="./icon-192-v2.png">
 <style>
+  /* Two schemes. Dark is the default; light is a deliberate choice, kept in
+     its own storage key so importing a backup never changes how it looks. */
   :root{
-    --bg:#0e0d16; --bg-2:#171626; --bg-3:#1f1d33;
-    --line:#2b2942;
-    --ink:#e6e2f2; --ink-2:#a49dc0; --ink-3:#6f6890;
-    --accent:#9d8bff;
-    --danger:#ff8a8a; --amber-w:#ffb454;
-    --ok:#7fd6a8;
+    --bg:#14101f; --bg-2:#1e1830; --bg-3:#2a2142;
+    --line:#3b2d55;
+    --ink:#f2e9fa; --ink-2:#c6acdb; --ink-3:#8f74a8;
+    --accent:#c77dff;          /* purple */
+    --accent-2:#ff8fc7;        /* pink   */
+    --on-accent:#1a1026;
+    --danger:#ff9ab5; --amber-w:#ffc46b;
+    --ok:#9be7c4;
     --r:14px;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  html[data-theme="light"]{
+    --bg:#fffdf2; --bg-2:#fff8df; --bg-3:#fdf1c9;
+    --line:#e7d59b;
+    --ink:#3a2f14; --ink-2:#7a6733; --ink-3:#a58f52;
+    --accent:#c9a227;          /* gold          */
+    --accent-2:#f7d774;        /* pastel yellow */
+    --on-accent:#302408;
+    --danger:#b4522f; --amber-w:#a8781a;
+    --ok:#5c8a4a;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
@@ -30,7 +44,7 @@
   .wrap{max-width:640px;margin:0 auto;padding:0 16px}
 
   header.top{
-    position:sticky;top:0;z-index:20;background:rgba(14,13,22,.94);
+    position:sticky;top:0;z-index:20;background:var(--bg);
     backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
     padding:env(safe-area-inset-top) 0 0;
   }
@@ -40,7 +54,7 @@
 
   nav.tabs{
     position:fixed;bottom:0;left:0;right:0;z-index:30;
-    background:rgba(14,13,22,.97);backdrop-filter:blur(10px);
+    background:var(--bg);
     border-top:1px solid var(--line);
     padding-bottom:env(safe-area-inset-bottom);
     display:flex;
@@ -66,7 +80,7 @@
 
   .m-row{display:flex;align-items:center;gap:12px;cursor:pointer}
   .dot{width:38px;height:38px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
-    font-weight:600;font-size:.95rem;color:#0e0d16}
+    font-weight:600;font-size:.95rem;color:var(--bg)}
   .m-name{font-weight:600}
   .m-sub{font-size:.8rem;color:var(--ink-2)}
   .chev{margin-left:auto;color:var(--ink-3)}
@@ -80,7 +94,7 @@
   button,.btn{font:inherit;font-size:.9rem;border-radius:10px;border:1px solid var(--line);
     background:var(--bg-3);color:var(--ink);padding:10px 14px;cursor:pointer}
   button:active{transform:translateY(1px)}
-  .btn-primary{background:var(--accent);border-color:var(--accent);color:#15102e;font-weight:600}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
   .btn-ghost{background:transparent}
   .btn-danger{color:var(--danger)}
   .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
@@ -107,7 +121,8 @@
   .pill-pick{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
   .pill{font-size:.8rem;padding:6px 12px;border-radius:999px;border:1px solid var(--line);
     background:transparent;color:var(--ink-2);cursor:pointer}
-  .pill.on{border-color:var(--accent);color:var(--ink);background:rgba(157,139,255,.14)}
+  .pill.on{border-color:var(--accent);color:var(--ink);
+    background:color-mix(in srgb, var(--accent) 16%, transparent)}
 
   .front-now{display:flex;flex-wrap:wrap;gap:8px}
   .front-chip{display:flex;align-items:center;gap:8px;background:var(--bg-3);
@@ -122,8 +137,11 @@
   .bond .lbl{color:var(--ink-2);font-size:.85rem}
 
   .note{font-size:.82rem;color:var(--ink-3);line-height:1.6}
-  .warn{border-color:#4a3550;background:#241a2b}
+  .warn{border-color:var(--accent-2);
+    background:color-mix(in srgb, var(--accent-2) 12%, var(--bg-2))}
   a{color:var(--accent)}
+  .themebtn{background:none;border:1px solid var(--line);border-radius:999px;
+    padding:5px 11px;font-size:.72rem;color:var(--ink-2);cursor:pointer;letter-spacing:.04em}
   .hide{display:none!important}
 </style>
 </head>
@@ -133,6 +151,7 @@
   <div class="wrap bar">
     <h1 id="title">Front</h1>
     <span class="count" id="count"></span>
+    <button class="themebtn" id="btnTheme" title="Switch light and dark">theme</button>
   </div>
 </header>
 
@@ -143,6 +162,10 @@
     <h2 class="sec">Fronting now</h2>
     <div id="frontNow"></div>
     <div class="btn-row"><button class="btn-primary full" id="btnSetFront">Change who's fronting</button></div>
+
+    <h2 class="sec">Right now</h2>
+    <div class="pill-pick" id="labelPick"></div>
+    <p class="note" id="labelHint" style="margin-top:10px"></p>
 
     <h2 class="sec">History</h2>
     <div class="card" id="histBox"></div>
@@ -194,6 +217,10 @@
     <div id="roleList"></div>
     <div class="btn-row"><button id="btnAddRole" class="full">Add a role</button></div>
 
+    <h2 class="sec">Labels</h2>
+    <div id="labelList"></div>
+    <div class="btn-row"><button id="btnAddLabel" class="full">Add a label</button></div>
+
     <h2 class="sec">Where this lives</h2>
     <p class="note">
       Everything is stored on this device only. Nothing is sent anywhere, there is no account
@@ -219,6 +246,19 @@
 "use strict";
 
 const KEY = "system-app-v1";
+const THEME_KEY = "system-app-theme";   // a per-device look, never part of a backup
+
+function applyTheme(t){
+  document.documentElement.setAttribute("data-theme", t);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute("content", t === "light" ? "#fffdf2" : "#14101f");
+  try{ localStorage.setItem(THEME_KEY, t); }catch(e){}
+}
+(function initTheme(){
+  let t = "dark";
+  try{ t = localStorage.getItem(THEME_KEY) || "dark"; }catch(e){}
+  applyTheme(t);
+})();
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
 // --- storage ---------------------------------------------------------------
@@ -263,10 +303,15 @@ function rescueRaw(){
 }
 
 function blank(){
-  return { v:1, members:[], roles:[], bonds:[], fronts:[], lastBackup:null };
+  return { v:1, members:[], roles:[], bonds:[], fronts:[],
+           labels:[], labelLog:[], lastBackup:null };
 }
 
 let S = load();
+// A backup written before labels existed is still valid. Fill the gaps
+// rather than rejecting it - an old export must always still import.
+if (!Array.isArray(S.labels))   S.labels = [];
+if (!Array.isArray(S.labelLog)) S.labelLog = [];
 let filterRole = null;
 
 // --- helpers ---------------------------------------------------------------
@@ -305,7 +350,7 @@ sheet.addEventListener("click", e => { if(e.target === sheet) closeSheet(); });
 
 // --- render ----------------------------------------------------------------
 function render(){
-  renderFront(); renderMembers(); renderVoid(); renderBonds(); renderData();
+  renderFront(); renderLabels(); renderMembers(); renderVoid(); renderBonds(); renderData();
   const n = living().length;
   $("#count").textContent = n + (n === 1 ? " member" : " members");
 }
@@ -334,16 +379,64 @@ function renderFront(){
       }).join("") + `</div>`
     : `<div class="empty">Nobody marked as fronting.</div>`;
 
-  const done = S.fronts.filter(f => f.end).sort((a,b) => b.end - a.end).slice(0, 40);
+  const labelRows = S.labelLog.filter(l => l.end).map(l => {
+    const d = S.labels.find(x => x.id === l.labelId);
+    return d ? {kind:"label", name:d.name, color:d.color, start:l.start, end:l.end} : null;
+  }).filter(Boolean);
+  const done = S.fronts.filter(f => f.end).map(f => {
+      const m = member(f.memberId);
+      return m ? {kind:"front", name:m.name, color:m.color, start:f.start, end:f.end} : null;
+    }).filter(Boolean).concat(labelRows)
+    .sort((a,b) => b.end - a.end).slice(0, 40);
   $("#histBox").innerHTML = done.length
-    ? done.map(f => {
-        const m = member(f.memberId); if(!m) return "";
-        return `<div class="hist">
-          <span class="d dot" style="width:14px;height:14px;background:${esc(m.color)}"></span>
-          <span>${esc(m.name)}</span>
-          <span class="when">${esc(when(f.start))}<br>${esc(dur(f.start, f.end))}</span></div>`;
-      }).join("")
+    ? done.map(r => `<div class="hist">
+          <span class="d dot" style="width:14px;height:14px;background:${esc(r.color)}${
+            r.kind === "label" ? ";border-radius:3px" : ""}"></span>
+          <span${r.kind === "label" ? ` style="color:var(--ink-2);font-style:italic"` : ""
+            }>${esc(r.name)}</span>
+          <span class="when">${esc(when(r.start))}<br>${esc(dur(r.start, r.end))}</span></div>`).join("")
     : `<div class="note">No history yet. It fills in as fronts end.</div>`;
+}
+
+function renderLabels(){
+  const open = new Set(S.labelLog.filter(l => !l.end).map(l => l.labelId));
+  $("#labelPick").innerHTML = S.labels.length
+    ? S.labels.map(l => `<button class="pill ${open.has(l.id) ? "on" : ""}" data-label="${l.id}"
+        ${open.has(l.id) ? `style="border-color:${esc(l.color)}"` : ""}>${esc(l.name)}</button>`).join("")
+    : `<span class="note">No labels yet - add your own under Data. Your words, for
+        whatever is worth noting: how the day is going, where you are, what is happening.</span>`;
+
+  $("#labelHint").textContent = S.labelLog.filter(l => !l.end).map(l => {
+    const d = S.labels.find(x => x.id === l.labelId);
+    return d ? d.name + " - " + dur(l.start) : "";
+  }).filter(Boolean).join("     ");
+
+  $("#labelList").innerHTML = S.labels.length
+    ? S.labels.map(l => `<div class="card"><div class="bond">
+        <span class="d dot" style="width:16px;height:16px;border-radius:3px;background:${esc(l.color)}"></span>
+        <strong>${esc(l.name)}</strong>
+        <button class="btn-ghost btn-danger" style="margin-left:auto;padding:4px 10px"
+                data-unlabel="${l.id}">Remove</button></div></div>`).join("")
+    : `<div class="empty">No labels yet. They are your words, not a preset list.</div>`;
+}
+
+function toggleLabel(id){
+  const open = S.labelLog.find(l => l.labelId === id && !l.end);
+  if(open) open.end = Date.now();
+  else S.labelLog.push({id: uid(), labelId: id, start: Date.now(), end: null});
+  save(); render();
+}
+
+function labelSheet(){
+  openSheet(`<h3>New label</h3>
+    <p class="sub">Something you tap on and off as the day goes. It keeps a start
+    and an end time, so it lands in your history beside who was fronting.</p>
+    <label class="f">Name</label><input type="text" id="lName" autocomplete="off">
+    <label class="f">Colour</label><input type="color" id="lCol" value="#ff8fc7">
+    <div class="btn-row">
+      <button class="btn-primary" data-savelabel>Save</button>
+      <button data-close>Cancel</button>
+    </div>`);
 }
 
 function frontSheet(){
@@ -561,7 +654,7 @@ function importFile(file){
     if(!confirm(`Replace everything on this device with this file?\n\n${data.members.length} members.\nYour current data will be gone unless you exported it.`)) return;
     // Carry EVERYTHING through, including keys this version doesn't know about.
     // A future field must survive a round-trip through an older build.
-    const known = ["v","members","roles","bonds","fronts","lastBackup"];
+    const known = ["v","members","roles","bonds","fronts","labels","labelLog","lastBackup"];
     const extra = Object.keys(data).filter(k => !known.includes(k));
     S = Object.assign({}, data, {
       v: 1,
@@ -569,6 +662,8 @@ function importFile(file){
       roles:   data.roles   || [],
       bonds:   data.bonds   || [],
       fronts:  data.fronts  || [],
+      labels:   data.labels   || [],
+      labelLog: data.labelLog || [],
       lastBackup: data.lastBackup ?? null
     });
     save(); render();
@@ -595,7 +690,8 @@ window.addEventListener("hashchange", route);
 // --- one delegated click handler ------------------------------------------
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-open],[data-front],[data-filter],[data-save],[data-close],"
-    + "[data-void],[data-role],[data-unbond],[data-savebond],[data-saverole],[data-unrole]");
+    + "[data-void],[data-role],[data-unbond],[data-savebond],[data-saverole],[data-unrole],"
+    + "[data-label],[data-savelabel],[data-unlabel]");
   if(!t) return;
   const d = t.dataset;
 
@@ -619,6 +715,17 @@ document.addEventListener("click", e => {
     S.members.forEach(m => m.roles = m.roles.filter(r => r !== d.unrole));
     save(); render(); return;
   }
+  if("label"     in d) return toggleLabel(d.label);
+  if("savelabel" in d){
+    const name = $("#lName").value.trim(); if(!name) return;
+    S.labels.push({id: uid(), name, color: $("#lCol").value});
+    save(); closeSheet(); render(); return;
+  }
+  if("unlabel"   in d){
+    S.labels   = S.labels.filter(l => l.id !== d.unlabel);
+    S.labelLog = S.labelLog.filter(l => l.labelId !== d.unlabel);
+    save(); render(); return;
+  }
   if("filter"    in d){ filterRole = d.filter || null; renderMembers(); return; }
   if("role"      in d){
     const cur = JSON.parse(sheetBody.dataset.roles || "[]");
@@ -635,6 +742,11 @@ $("#btnQuickAdd").addEventListener("click", quickAddSheet);
 $("#btnAddMember").addEventListener("click", () => memberSheet(null));
 $("#btnAddBond").addEventListener("click", bondSheet);
 $("#btnAddRole").addEventListener("click", roleSheet);
+$("#btnAddLabel").addEventListener("click", labelSheet);
+$("#btnTheme").addEventListener("click", () => {
+  const now = document.documentElement.getAttribute("data-theme");
+  applyTheme(now === "light" ? "dark" : "light");
+});
 $("#btnExport").addEventListener("click", exportFile);
 $("#btnImport").addEventListener("click", () => $("#fileIn").click());
 $("#fileIn").addEventListener("change", e => { if(e.target.files[0]) importFile(e.target.files[0]); e.target.value = ""; });
