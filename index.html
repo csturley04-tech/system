@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e0d16">
+<title>System</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>
+  :root{
+    --bg:#0e0d16; --bg-2:#171626; --bg-3:#1f1d33;
+    --line:#2b2942;
+    --ink:#e6e2f2; --ink-2:#a49dc0; --ink-3:#6f6890;
+    --accent:#9d8bff;
+    --danger:#ff8a8a; --amber-w:#ffb454;
+    --ok:#7fd6a8;
+    --r:14px;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:16px;line-height:1.5;
+    padding-bottom:calc(70px + env(safe-area-inset-bottom));
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:0 16px}
+
+  header.top{
+    position:sticky;top:0;z-index:20;background:rgba(14,13,22,.94);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+    padding:env(safe-area-inset-top) 0 0;
+  }
+  header.top .bar{display:flex;align-items:center;gap:12px;height:56px}
+  header.top h1{font-size:1.05rem;font-weight:600;margin:0;letter-spacing:.01em}
+  header.top .count{margin-left:auto;font-size:.8rem;color:var(--ink-3)}
+
+  nav.tabs{
+    position:fixed;bottom:0;left:0;right:0;z-index:30;
+    background:rgba(14,13,22,.97);backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom);
+    display:flex;
+  }
+  nav.tabs a{
+    flex:1;text-align:center;padding:10px 2px 12px;text-decoration:none;
+    color:var(--ink-3);font-size:.68rem;letter-spacing:.03em;
+  }
+  nav.tabs a .ic{display:block;font-size:1.15rem;line-height:1.5;margin-bottom:1px}
+  nav.tabs a.on{color:var(--accent)}
+
+  main{padding-top:18px}
+  section{display:none}
+  section.on{display:block;animation:fade .22s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  h2.sec{font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-3);
+    margin:26px 0 10px;font-weight:600}
+  h2.sec:first-child{margin-top:4px}
+
+  .card{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r);
+    padding:14px;margin-bottom:10px}
+
+  .m-row{display:flex;align-items:center;gap:12px;cursor:pointer}
+  .dot{width:38px;height:38px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+    font-weight:600;font-size:.95rem;color:#0e0d16}
+  .m-name{font-weight:600}
+  .m-sub{font-size:.8rem;color:var(--ink-2)}
+  .chev{margin-left:auto;color:var(--ink-3)}
+
+  .tag{display:inline-block;font-size:.68rem;padding:2px 8px;border-radius:999px;
+    border:1px solid var(--line);color:var(--ink-2);margin:3px 4px 0 0}
+
+  .empty{color:var(--ink-3);font-size:.9rem;text-align:center;padding:34px 18px;
+    border:1px dashed var(--line);border-radius:var(--r)}
+
+  button,.btn{font:inherit;font-size:.9rem;border-radius:10px;border:1px solid var(--line);
+    background:var(--bg-3);color:var(--ink);padding:10px 14px;cursor:pointer}
+  button:active{transform:translateY(1px)}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:#15102e;font-weight:600}
+  .btn-ghost{background:transparent}
+  .btn-danger{color:var(--danger)}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .full{width:100%}
+
+  label.f{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;
+    color:var(--ink-3);margin:14px 0 5px}
+  input[type=text],textarea,select{
+    width:100%;font:inherit;font-size:.95rem;background:var(--bg-3);color:var(--ink);
+    border:1px solid var(--line);border-radius:10px;padding:11px 12px}
+  textarea{min-height:88px;resize:vertical}
+  input[type=color]{width:52px;height:38px;padding:2px;background:var(--bg-3);
+    border:1px solid var(--line);border-radius:10px}
+
+  dialog{border:none;padding:0;background:transparent;max-width:100%;width:100%}
+  dialog::backdrop{background:rgba(6,5,12,.72)}
+  .sheet{background:var(--bg-2);border:1px solid var(--line);border-radius:18px 18px 0 0;
+    padding:18px 16px calc(22px + env(safe-area-inset-bottom));
+    max-width:640px;margin:0 auto;max-height:90vh;overflow-y:auto}
+  dialog{position:fixed;inset:auto 0 0 0;margin:0}
+  .sheet h3{margin:0 0 2px;font-size:1.1rem}
+  .sheet .sub{color:var(--ink-3);font-size:.82rem;margin-bottom:6px}
+
+  .pill-pick{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+  .pill{font-size:.8rem;padding:6px 12px;border-radius:999px;border:1px solid var(--line);
+    background:transparent;color:var(--ink-2);cursor:pointer}
+  .pill.on{border-color:var(--accent);color:var(--ink);background:rgba(157,139,255,.14)}
+
+  .front-now{display:flex;flex-wrap:wrap;gap:8px}
+  .front-chip{display:flex;align-items:center;gap:8px;background:var(--bg-3);
+    border:1px solid var(--line);border-radius:999px;padding:6px 12px 6px 6px;font-size:.9rem}
+  .front-chip .d{width:22px;height:22px;border-radius:50%}
+
+  .hist{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .hist:last-child{border-bottom:none}
+  .hist .when{margin-left:auto;font-size:.74rem;color:var(--ink-3);text-align:right;white-space:nowrap}
+
+  .bond{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .bond .lbl{color:var(--ink-2);font-size:.85rem}
+
+  .note{font-size:.82rem;color:var(--ink-3);line-height:1.6}
+  .warn{border-color:#4a3550;background:#241a2b}
+  a{color:var(--accent)}
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap bar">
+    <h1 id="title">Front</h1>
+    <span class="count" id="count"></span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- FRONT ------------------------------------------------------- -->
+  <section id="v-front" class="on">
+    <h2 class="sec">Fronting now</h2>
+    <div id="frontNow"></div>
+    <div class="btn-row"><button class="btn-primary full" id="btnSetFront">Change who's fronting</button></div>
+
+    <h2 class="sec">History</h2>
+    <div class="card" id="histBox"></div>
+  </section>
+
+  <!-- MEMBERS ----------------------------------------------------- -->
+  <section id="v-members">
+    <h2 class="sec">Filter by role</h2>
+    <div class="pill-pick" id="roleFilter"></div>
+    <h2 class="sec">Members</h2>
+    <div id="memberList"></div>
+    <div class="btn-row">
+      <button class="btn-primary full" id="btnQuickAdd">Add people quickly</button>
+      <button class="full" id="btnAddMember">Add one, with details</button>
+    </div>
+  </section>
+
+  <!-- VOID -------------------------------------------------------- -->
+  <section id="v-void">
+    <p class="note">Everyone here keeps everything — profile, bonds, notes, their whole front
+    history. Dormant is a state, not a deletion. Bringing someone back is one tap and nothing
+    was lost while they were away.</p>
+    <h2 class="sec">In the void</h2>
+    <div id="voidList"></div>
+  </section>
+
+  <!-- BONDS ------------------------------------------------------- -->
+  <section id="v-bonds">
+    <h2 class="sec">Relationships</h2>
+    <div id="bondList"></div>
+    <div class="btn-row"><button class="btn-primary full" id="btnAddBond">Add a relationship</button></div>
+  </section>
+
+  <!-- DATA -------------------------------------------------------- -->
+  <section id="v-data">
+    <h2 class="sec">Your data</h2>
+    <div id="lockLine"></div>
+    <div class="card">
+      <div id="backupLine" class="note" style="margin-bottom:6px"></div>
+      <div id="stats" class="note"></div>
+      <div class="btn-row">
+        <button id="btnExport" class="btn-primary">Export to file</button>
+        <button id="btnImport">Import a file</button>
+      </div>
+      <input type="file" id="fileIn" accept="application/json,.json" class="hide">
+    </div>
+
+    <h2 class="sec">Roles</h2>
+    <div id="roleList"></div>
+    <div class="btn-row"><button id="btnAddRole" class="full">Add a role</button></div>
+
+    <h2 class="sec">Where this lives</h2>
+    <p class="note">
+      Everything is stored on this device only. Nothing is sent anywhere, there is no account
+      and no server. That also means <strong>this device is the only copy</strong> — export to a
+      file now and then, and keep it somewhere you'd still have it if the phone went in a river.
+    </p>
+  </section>
+
+</main>
+
+<nav class="tabs">
+  <a href="#front"   data-tab="front"><span class="ic">◐</span>Front</a>
+  <a href="#members" data-tab="members"><span class="ic">☰</span>Members</a>
+  <a href="#void"    data-tab="void"><span class="ic">✧</span>The Void</a>
+  <a href="#bonds"   data-tab="bonds"><span class="ic">∞</span>Bonds</a>
+  <a href="#data"    data-tab="data"><span class="ic">⤓</span>Data</a>
+</nav>
+
+<dialog id="sheet"><div class="sheet" id="sheetBody"></div></dialog>
+
+<script>
+(() => {
+"use strict";
+
+const KEY = "system-app-v1";
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+
+// --- storage ---------------------------------------------------------------
+// Wrapped: storage can throw in private modes / blocked-site-data settings.
+let LOCKED = false;      // set when stored data exists but cannot be read
+let RAW_ON_DISK = null;  // the untouched string, kept so nothing overwrites it
+
+function load(){
+  let raw = null;
+  try{ raw = localStorage.getItem(KEY); }
+  catch(e){
+    LOCKED = true;                       // can't even reach storage — assume data exists
+    return blank();
+  }
+  if(raw === null) return blank();       // genuinely nothing stored yet
+  try{ return JSON.parse(raw); }
+  catch(e){
+    // Stored data IS there and is unreadable. Do not start fresh, do not save
+    // over it. The raw string is intact until someone decides otherwise.
+    LOCKED = true; RAW_ON_DISK = raw;
+    return blank();
+  }
+}
+
+function save(){
+  if(LOCKED){
+    alert("Not saving. There is existing data on this device that couldn't be read, "
+        + "and writing now would overwrite it. Rescue it from the Data tab first.");
+    return;
+  }
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch(e){ alert("Couldn't save to this device. Export your data now so it isn't lost."); }
+}
+
+function rescueRaw(){
+  if(!RAW_ON_DISK) return;
+  const blob = new Blob([RAW_ON_DISK], {type:"text/plain"});
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = "system-unreadable-raw-" + new Date().toISOString().slice(0,10) + ".txt";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function blank(){
+  return { v:1, members:[], roles:[], bonds:[], fronts:[], lastBackup:null };
+}
+
+let S = load();
+let filterRole = null;
+
+// --- helpers ---------------------------------------------------------------
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const member = id => S.members.find(m => m.id === id);
+const role   = id => S.roles.find(r => r.id === id);
+const living = () => S.members.filter(m => !m.dormant);
+const initial = n => (n.trim()[0] || "?").toUpperCase();
+
+function when(ts){
+  const d = new Date(ts), now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  const t = d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  if(sameDay) return t;
+  return d.toLocaleDateString([], {day:"numeric", month:"short"}) + " " + t;
+}
+function dur(a, b){
+  const ms = (b || Date.now()) - a, min = Math.round(ms/60000);
+  if(min < 60) return min + "m";
+  const h = Math.floor(min/60);
+  if(h < 24) return h + "h " + (min%60) + "m";
+  return Math.floor(h/24) + "d " + (h%24) + "h";
+}
+
+// --- sheet -----------------------------------------------------------------
+const sheet = $("#sheet"), sheetBody = $("#sheetBody");
+function openSheet(html){
+  sheetBody.innerHTML = html;
+  if(!sheet.open) sheet.showModal();
+}
+function closeSheet(){ if(sheet.open) sheet.close(); }
+sheet.addEventListener("click", e => { if(e.target === sheet) closeSheet(); });
+
+// --- render ----------------------------------------------------------------
+function render(){
+  renderFront(); renderMembers(); renderVoid(); renderBonds(); renderData();
+  const n = living().length;
+  $("#count").textContent = n + (n === 1 ? " member" : " members");
+}
+
+function memberRow(m, onclick){
+  return `<div class="card"><div class="m-row" data-open="${m.id}">
+    <div class="dot" style="background:${esc(m.color)}">${esc(initial(m.name))}</div>
+    <div>
+      <div class="m-name">${esc(m.name)}</div>
+      <div class="m-sub">${esc(m.pronouns || "—")}</div>
+      ${m.roles.map(r => role(r)).filter(Boolean)
+        .map(r => `<span class="tag" style="border-color:${esc(r.color)}">${esc(r.name)}</span>`).join("")}
+    </div>
+    <div class="chev">›</div>
+  </div></div>`;
+}
+
+/* ---- front ---- */
+function renderFront(){
+  const open = S.fronts.filter(f => !f.end);
+  $("#frontNow").innerHTML = open.length
+    ? `<div class="front-now">` + open.map(f => {
+        const m = member(f.memberId); if(!m) return "";
+        return `<span class="front-chip"><span class="d" style="background:${esc(m.color)}"></span>
+          ${esc(m.name)} <span style="color:var(--ink-3);font-size:.78rem">${dur(f.start)}</span></span>`;
+      }).join("") + `</div>`
+    : `<div class="empty">Nobody marked as fronting.</div>`;
+
+  const done = S.fronts.filter(f => f.end).sort((a,b) => b.end - a.end).slice(0, 40);
+  $("#histBox").innerHTML = done.length
+    ? done.map(f => {
+        const m = member(f.memberId); if(!m) return "";
+        return `<div class="hist">
+          <span class="d dot" style="width:14px;height:14px;background:${esc(m.color)}"></span>
+          <span>${esc(m.name)}</span>
+          <span class="when">${esc(when(f.start))}<br>${esc(dur(f.start, f.end))}</span></div>`;
+      }).join("")
+    : `<div class="note">No history yet. It fills in as fronts end.</div>`;
+}
+
+function frontSheet(){
+  const openIds = new Set(S.fronts.filter(f => !f.end).map(f => f.memberId));
+  openSheet(`<h3>Who's fronting?</h3>
+    <p class="sub">Tap to switch someone in or out. Switching out writes a history entry.</p>
+    <div class="pill-pick">${living().map(m =>
+      `<button class="pill ${openIds.has(m.id) ? "on" : ""}" data-front="${m.id}">${esc(m.name)}</button>`
+    ).join("") || `<span class="note">No members yet.</span>`}</div>
+    <div class="btn-row"><button class="btn-primary full" data-close>Done</button></div>`);
+}
+
+function toggleFront(id){
+  const open = S.fronts.find(f => f.memberId === id && !f.end);
+  if(open) open.end = Date.now();
+  else S.fronts.push({id: uid(), memberId: id, start: Date.now(), end: null});
+  save(); render(); frontSheet();
+}
+
+/* ---- members ---- */
+function renderMembers(){
+  $("#roleFilter").innerHTML =
+    `<button class="pill ${filterRole===null?"on":""}" data-filter="">All</button>` +
+    S.roles.map(r => `<button class="pill ${filterRole===r.id?"on":""}" data-filter="${r.id}">${esc(r.name)}</button>`).join("");
+
+  let list = living();
+  if(filterRole) list = list.filter(m => m.roles.includes(filterRole));
+  $("#memberList").innerHTML = list.length
+    ? list.map(m => memberRow(m)).join("")
+    : `<div class="empty">Nobody here yet.</div>`;
+}
+
+function quickAddSheet(){
+  openSheet(`<h3>Add people</h3>
+    <p class="sub">Just names. Type one, press enter, type the next. Everything else
+    — pronouns, colour, roles, notes — comes later, on whoever you feel like.</p>
+    <input type="text" id="qName" autocomplete="off" placeholder="Name, then enter">
+    <div id="qAdded" class="note" style="margin-top:12px"></div>
+    <div class="btn-row"><button class="btn-primary full" data-close>Done</button></div>`);
+  const box = $("#qName"), log = $("#qAdded");
+  const added = [];
+  box.focus();
+  box.addEventListener("keydown", ev => {
+    if(ev.key !== "Enter") return;
+    const name = box.value.trim();
+    if(!name) return;
+    const pal = ["#c58bff","#7fb0ff","#ffb454","#7fd6a8","#ff8fb1","#9d8bff","#8ce0e0","#ffa0d0"];
+    S.members.push({
+      id: uid(), name, pronouns:"", color: pal[S.members.length % pal.length],
+      roles: [], note:"", dormant:false, created: Date.now()
+    });
+    added.unshift(name);
+    save(); render();
+    log.innerHTML = added.length + " added — " + added.map(esc).join(", ");
+    box.value = ""; box.focus();
+  });
+}
+
+function memberSheet(id){
+  const m = id ? member(id) : {id:"", name:"", pronouns:"", color:"#9d8bff", roles:[], note:"", dormant:false};
+  const isNew = !id;
+  openSheet(`
+    <h3>${isNew ? "New member" : esc(m.name)}</h3>
+    <label class="f">Name</label>
+    <input type="text" id="fName" value="${esc(m.name)}" autocomplete="off">
+    <label class="f">Pronouns</label>
+    <input type="text" id="fPro" value="${esc(m.pronouns)}" autocomplete="off" placeholder="they/them">
+    <label class="f">Colour</label>
+    <input type="color" id="fCol" value="${esc(m.color)}">
+    <label class="f">Roles</label>
+    <div class="pill-pick" id="fRoles">${
+      S.roles.length
+        ? S.roles.map(r => `<button class="pill ${m.roles.includes(r.id)?"on":""}" data-role="${r.id}">${esc(r.name)}</button>`).join("")
+        : `<span class="note">No roles defined yet — add them under Data.</span>`
+    }</div>
+    <label class="f">Notes</label>
+    <textarea id="fNote" placeholder="Anything worth keeping.">${esc(m.note)}</textarea>
+    <div class="btn-row">
+      <button class="btn-primary" data-save="${m.id}">Save</button>
+      <button data-close>Cancel</button>
+      ${id ? `<button class="btn-ghost" data-void="${m.id}">${m.dormant ? "Bring back" : "Send to the void"}</button>` : ""}
+    </div>
+    ${id ? `<p class="note" style="margin-top:14px">Sending someone to the void keeps everything —
+      profile, bonds, notes, history. They just leave the main list.</p>` : ""}`);
+  // remember role toggles locally in the sheet
+  sheetBody.dataset.roles = JSON.stringify(m.roles);
+}
+
+function saveMember(id){
+  const name = $("#fName").value.trim();
+  if(!name){ $("#fName").focus(); return; }
+  const roles = JSON.parse(sheetBody.dataset.roles || "[]");
+  if(id){
+    const m = member(id);
+    Object.assign(m, {
+      name, pronouns: $("#fPro").value.trim(), color: $("#fCol").value,
+      roles, note: $("#fNote").value
+    });
+  } else {
+    S.members.push({
+      id: uid(), name, pronouns: $("#fPro").value.trim(), color: $("#fCol").value,
+      roles, note: $("#fNote").value, dormant: false, created: Date.now()
+    });
+  }
+  save(); closeSheet(); render();
+}
+
+/* ---- void ---- */
+function renderVoid(){
+  const list = S.members.filter(m => m.dormant);
+  $("#voidList").innerHTML = list.length
+    ? list.map(m => memberRow(m)).join("")
+    : `<div class="empty">Nobody is dormant right now.</div>`;
+}
+
+function toggleVoid(id){
+  const m = member(id);
+  m.dormant = !m.dormant;
+  if(m.dormant) S.fronts.filter(f => f.memberId === id && !f.end).forEach(f => f.end = Date.now());
+  save(); closeSheet(); render();
+}
+
+/* ---- bonds ---- */
+function renderBonds(){
+  $("#bondList").innerHTML = S.bonds.length
+    ? S.bonds.map(b => {
+        const a = member(b.a), z = member(b.b);
+        if(!a || !z) return "";
+        return `<div class="card"><div class="bond">
+          <span class="d dot" style="width:16px;height:16px;background:${esc(a.color)}"></span>
+          <strong>${esc(a.name)}</strong>
+          <span class="lbl">${esc(b.label)}</span>
+          <span class="d dot" style="width:16px;height:16px;background:${esc(z.color)}"></span>
+          <strong>${esc(z.name)}</strong>
+          <button class="btn-ghost btn-danger" style="margin-left:auto;padding:4px 10px"
+                  data-unbond="${b.id}">Remove</button>
+        </div></div>`;
+      }).join("")
+    : `<div class="empty">No relationships recorded yet.</div>`;
+}
+
+function bondSheet(){
+  const opts = S.members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("");
+  openSheet(`<h3>Add a relationship</h3>
+    <p class="sub">Write it in your own words. There's no list to pick from on purpose.</p>
+    <label class="f">Who</label><select id="bA">${opts}</select>
+    <label class="f">Is / are</label>
+    <input type="text" id="bL" placeholder="e.g. close to, protects, shares memory with" autocomplete="off">
+    <label class="f">Who</label><select id="bB">${opts}</select>
+    <div class="btn-row">
+      <button class="btn-primary" data-savebond>Save</button>
+      <button data-close>Cancel</button>
+    </div>`);
+}
+
+/* ---- data ---- */
+function renderData(){
+  const openF = S.fronts.filter(f => !f.end).length;
+  const lb = S.lastBackup;
+  const days = lb ? Math.floor((Date.now()-lb)/86400000) : null;
+  const stale = (days === null || days > 30);
+  $("#backupLine").innerHTML =
+    `<span style="color:${stale ? "var(--amber-w)" : "var(--ink-3)"}">last backup — ` +
+    (lb === null ? "never" : (days === 0 ? "today" : days + (days===1?" day":" days") + " ago")) +
+    `</span>`;
+  $("#lockLine").innerHTML = LOCKED
+    ? `<div class="card warn"><strong>Existing data on this device couldn't be read.</strong>
+       <p class="note">Nothing has been overwritten and saving is switched off. Get the raw
+       copy out first — it may still be repairable.</p>
+       <div class="btn-row"><button onclick="window.__rescue()">Download the raw copy</button></div></div>`
+    : "";
+  $("#stats").innerHTML =
+    `${S.members.length} members · ${S.members.filter(m=>m.dormant).length} in the void · ` +
+    `${S.roles.length} roles · ${S.bonds.length} relationships · ${S.fronts.length} front records` +
+    (openF ? ` · ${openF} fronting now` : "");
+
+  $("#roleList").innerHTML = S.roles.length
+    ? S.roles.map(r => `<div class="card"><div class="bond">
+        <span class="d dot" style="width:16px;height:16px;background:${esc(r.color)}"></span>
+        <strong>${esc(r.name)}</strong>
+        <button class="btn-ghost btn-danger" style="margin-left:auto;padding:4px 10px"
+                data-unrole="${r.id}">Remove</button></div></div>`).join("")
+    : `<div class="empty">No roles yet. You define them — nothing is preset.</div>`;
+}
+
+function roleSheet(){
+  openSheet(`<h3>New role</h3>
+    <p class="sub">Your categories, your names for them. A member can hold more than one.</p>
+    <label class="f">Name</label><input type="text" id="rName" autocomplete="off">
+    <label class="f">Colour</label><input type="color" id="rCol" value="#7fb0ff">
+    <div class="btn-row">
+      <button class="btn-primary" data-saverole>Save</button>
+      <button data-close>Cancel</button>
+    </div>`);
+}
+
+function exportFile(){
+  S.lastBackup = Date.now(); save(); render();   // the line must be true the instant it changes
+  const blob = new Blob([JSON.stringify(S, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const d = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `system-backup-${d}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function importFile(file){
+  const fr = new FileReader();
+  fr.onload = () => {
+    let data;
+    try{ data = JSON.parse(fr.result); }
+    catch(e){ alert("That file isn't readable JSON."); return; }
+    if(!data || !Array.isArray(data.members)){ alert("That doesn't look like a system backup."); return; }
+    if(!confirm(`Replace everything on this device with this file?\n\n${data.members.length} members.\nYour current data will be gone unless you exported it.`)) return;
+    // Carry EVERYTHING through, including keys this version doesn't know about.
+    // A future field must survive a round-trip through an older build.
+    const known = ["v","members","roles","bonds","fronts","lastBackup"];
+    const extra = Object.keys(data).filter(k => !known.includes(k));
+    S = Object.assign({}, data, {
+      v: 1,
+      members: data.members || [],
+      roles:   data.roles   || [],
+      bonds:   data.bonds   || [],
+      fronts:  data.fronts  || [],
+      lastBackup: data.lastBackup ?? null
+    });
+    save(); render();
+    alert("Imported." + (extra.length
+      ? "\n\nKept " + extra.length + " field(s) this version doesn't use yet: "
+        + extra.join(", ") + ". They're preserved, not dropped."
+      : ""));
+  };
+  fr.readAsText(file);
+}
+
+// --- routing ---------------------------------------------------------------
+const TITLES = {front:"Front", members:"Members", void:"The Void", bonds:"Bonds", data:"Data"};
+function route(){
+  const tab = (location.hash || "#front").slice(1);
+  const known = TITLES[tab] ? tab : "front";
+  $$("section").forEach(s => s.classList.toggle("on", s.id === "v-" + known));
+  $$("nav.tabs a").forEach(a => a.classList.toggle("on", a.dataset.tab === known));
+  $("#title").textContent = TITLES[known];
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange", route);
+
+// --- one delegated click handler ------------------------------------------
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-open],[data-front],[data-filter],[data-save],[data-close],"
+    + "[data-void],[data-role],[data-unbond],[data-savebond],[data-saverole],[data-unrole]");
+  if(!t) return;
+  const d = t.dataset;
+
+  if("close"     in d) return closeSheet();
+  if("open"      in d) return memberSheet(d.open);
+  if("front"     in d) return toggleFront(d.front);
+  if("save"      in d) return saveMember(d.save);
+  if("void"      in d) return toggleVoid(d.void);
+  if("unbond"    in d){ S.bonds = S.bonds.filter(b => b.id !== d.unbond); save(); render(); return; }
+  if("savebond"  in d){
+    const a = $("#bA").value, b = $("#bB").value, label = $("#bL").value.trim();
+    if(!label || a === b) return;
+    S.bonds.push({id: uid(), a, b, label}); save(); closeSheet(); render(); return;
+  }
+  if("saverole"  in d){
+    const name = $("#rName").value.trim(); if(!name) return;
+    S.roles.push({id: uid(), name, color: $("#rCol").value}); save(); closeSheet(); render(); return;
+  }
+  if("unrole"    in d){
+    S.roles = S.roles.filter(r => r.id !== d.unrole);
+    S.members.forEach(m => m.roles = m.roles.filter(r => r !== d.unrole));
+    save(); render(); return;
+  }
+  if("filter"    in d){ filterRole = d.filter || null; renderMembers(); return; }
+  if("role"      in d){
+    const cur = JSON.parse(sheetBody.dataset.roles || "[]");
+    const i = cur.indexOf(d.role);
+    if(i >= 0) cur.splice(i,1); else cur.push(d.role);
+    sheetBody.dataset.roles = JSON.stringify(cur);
+    t.classList.toggle("on");
+    return;
+  }
+});
+
+$("#btnSetFront").addEventListener("click", frontSheet);
+$("#btnQuickAdd").addEventListener("click", quickAddSheet);
+$("#btnAddMember").addEventListener("click", () => memberSheet(null));
+$("#btnAddBond").addEventListener("click", bondSheet);
+$("#btnAddRole").addEventListener("click", roleSheet);
+$("#btnExport").addEventListener("click", exportFile);
+$("#btnImport").addEventListener("click", () => $("#fileIn").click());
+$("#fileIn").addEventListener("change", e => { if(e.target.files[0]) importFile(e.target.files[0]); e.target.value = ""; });
+
+// Offline install. Only registers on a secure origin — from a plain file
+// it is skipped silently and the app works exactly the same, just without
+// the home-screen icon.
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  window.addEventListener("load", () =>
+    navigator.serviceWorker.register("./sw.js").catch(() => {}));
+}
+
+window.__rescue = rescueRaw;
+route();
+render();
+})();
+</script>
+</body>
+</html>
