@@ -14,7 +14,7 @@
 const CACHE = "system-v2";
 const FILES = [
   "./", "./index.html", "./manifest.webmanifest",
-  "./icon-192-v2.png", "./icon-512-v2.png", "./icon-512-maskable-v2.png"
+  "./icon-192-v3.png", "./icon-512-v3.png", "./icon-512-maskable-v3.png"
 ];
 
 self.addEventListener("install", e => {
@@ -53,7 +53,7 @@ self.addEventListener("fetch", e => {
   }
 
   // Icons and the manifest are cache-first, which is only safe because new
-  // artwork ALWAYS gets a new filename (icon-192-v2.png, -v3 and so on).
+  // artwork ALWAYS gets a new filename (icon-192-v3.png, -v3 and so on).
   // Overwriting an icon in place would leave every installed phone showing the
   // old one forever. The rule is the filename, not anyone remembering.
   e.respondWith(

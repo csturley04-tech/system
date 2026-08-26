@@ -6,8 +6,8 @@
 <meta name="theme-color" content="#0e0d16">
 <title>System</title>
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./icon-192-v2.png">
-<link rel="apple-touch-icon" href="./icon-192-v2.png">
+<link rel="icon" href="./icon-192-v3.png">
+<link rel="apple-touch-icon" href="./icon-192-v3.png">
 <style>
   /* Two schemes. Dark is the default; light is a deliberate choice, kept in
      its own storage key so importing a backup never changes how it looks. */
@@ -142,6 +142,13 @@
   a{color:var(--accent)}
   .themebtn{background:none;border:1px solid var(--line);border-radius:999px;
     padding:5px 11px;font-size:.72rem;color:var(--ink-2);cursor:pointer;letter-spacing:.04em}
+  .msg{padding:12px 14px}
+  .msg-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .msg-head .when{font-size:.72rem;color:var(--ink-3)}
+  .msg-body{white-space:pre-wrap;font-size:.95rem;line-height:1.6}
+  .colour-row{display:flex;gap:12px;align-items:flex-start}
+  .colour-row input[type=color]{flex:0 0 auto;width:60px;height:44px}
+  #memberSearch{margin-bottom:4px}
   .hide{display:none!important}
 </style>
 </head>
@@ -173,6 +180,8 @@
 
   <!-- MEMBERS ----------------------------------------------------- -->
   <section id="v-members">
+    <input type="text" id="memberSearch" autocomplete="off"
+           placeholder="Search names, pronouns, roles, notes">
     <h2 class="sec">Filter by role</h2>
     <div class="pill-pick" id="roleFilter"></div>
     <h2 class="sec">Members</h2>
@@ -192,7 +201,22 @@
     <div id="voidList"></div>
   </section>
 
-  <!-- BONDS ------------------------------------------------------- -->
+  <!-- BOARD -------------------------------------------------------- -->
+  <section id="v-board">
+    <p class="note">Somewhere to leave each other messages. Pick who's writing,
+    say the thing. Nothing is ever edited or sent anywhere - it stays on this
+    device with the rest.</p>
+    <div id="boardList"></div>
+    <div class="card" style="margin-top:14px">
+      <label class="f">From</label>
+      <select id="msgWho"></select>
+      <label class="f">Message</label>
+      <textarea id="msgText" placeholder="Anything worth saying."></textarea>
+      <div class="btn-row"><button class="btn-primary full" id="btnPost">Leave it</button></div>
+    </div>
+  </section>
+
+  <!-- BONDS ------------------------------------------------------------ -->
   <section id="v-bonds">
     <h2 class="sec">Relationships</h2>
     <div id="bondList"></div>
@@ -235,6 +259,7 @@
   <a href="#front"   data-tab="front"><span class="ic">◐</span>Front</a>
   <a href="#members" data-tab="members"><span class="ic">☰</span>Members</a>
   <a href="#void"    data-tab="void"><span class="ic">✧</span>The Void</a>
+  <a href="#board"   data-tab="board"><span class="ic">✉</span>Board</a>
   <a href="#bonds"   data-tab="bonds"><span class="ic">∞</span>Bonds</a>
   <a href="#data"    data-tab="data"><span class="ic">⤓</span>Data</a>
 </nav>
@@ -304,7 +329,7 @@ function rescueRaw(){
 
 function blank(){
   return { v:1, members:[], roles:[], bonds:[], fronts:[],
-           labels:[], labelLog:[], lastBackup:null };
+           labels:[], labelLog:[], messages:[], lastBackup:null };
 }
 
 let S = load();
@@ -313,6 +338,7 @@ let S = load();
 if (!Array.isArray(S.labels))   S.labels = [];
 if (!Array.isArray(S.labelLog)) S.labelLog = [];
 let filterRole = null;
+let searchQuery = "";
 
 // --- helpers ---------------------------------------------------------------
 const $  = s => document.querySelector(s);
@@ -350,7 +376,8 @@ sheet.addEventListener("click", e => { if(e.target === sheet) closeSheet(); });
 
 // --- render ----------------------------------------------------------------
 function render(){
-  renderFront(); renderLabels(); renderMembers(); renderVoid(); renderBonds(); renderData();
+  renderFront(); renderLabels(); renderMembers(); renderVoid();
+  renderBoard(); renderBonds(); renderData();
   const n = living().length;
   $("#count").textContent = n + (n === 1 ? " member" : " members");
 }
@@ -396,6 +423,43 @@ function renderFront(){
             }>${esc(r.name)}</span>
           <span class="when">${esc(when(r.start))}<br>${esc(dur(r.start, r.end))}</span></div>`).join("")
     : `<div class="note">No history yet. It fills in as fronts end.</div>`;
+}
+
+function renderBoard(){
+  const who = $("#msgWho");
+  const keep = who.value;
+  who.innerHTML = `<option value="">unsigned</option>` +
+    S.members.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join("");
+  if(keep) who.value = keep;
+
+  const msgs = S.messages.slice().sort((a,b) => a.at - b.at);
+  $("#boardList").innerHTML = msgs.length
+    ? msgs.map(msg => {
+        const m = msg.authorId ? member(msg.authorId) : null;
+        const col = m ? m.color : "var(--ink-3)";
+        return `<div class="card msg">
+          <div class="msg-head">
+            <span class="d dot" style="width:18px;height:18px;background:${esc(col)}"></span>
+            <strong>${esc(m ? m.name : "unsigned")}</strong>
+            <span class="when">${esc(when(msg.at))}</span>
+            <button class="btn-ghost btn-danger" style="margin-left:auto;padding:2px 8px;font-size:.72rem"
+                    data-unmsg="${msg.id}">remove</button>
+          </div>
+          <div class="msg-body">${esc(msg.text)}</div>
+        </div>`;
+      }).join("")
+    : `<div class="empty">Nothing on the board yet.</div>`;
+}
+
+function postMessage(){
+  const text = $("#msgText").value.trim();
+  if(!text) return;
+  S.messages.push({ id: uid(), authorId: $("#msgWho").value || null,
+                    text, at: Date.now() });
+  $("#msgText").value = "";
+  save(); render();
+  const list = $("#boardList");
+  if(list.lastElementChild) list.lastElementChild.scrollIntoView({block:"nearest"});
 }
 
 function renderLabels(){
@@ -464,6 +528,13 @@ function renderMembers(){
 
   let list = living();
   if(filterRole) list = list.filter(m => m.roles.includes(filterRole));
+  // Search covers roles too, so a role name typed here works like a tag search.
+  const q = (searchQuery || "").trim().toLowerCase();
+  if(q) list = list.filter(m => {
+    const roleNames = m.roles.map(r => (role(r) || {}).name || "").join(" ");
+    return (m.name + " " + m.pronouns + " " + m.note + " " + roleNames)
+             .toLowerCase().includes(q);
+  });
   $("#memberList").innerHTML = list.length
     ? list.map(m => memberRow(m)).join("")
     : `<div class="empty">Nobody here yet.</div>`;
@@ -504,8 +575,12 @@ function memberSheet(id){
     <input type="text" id="fName" value="${esc(m.name)}" autocomplete="off">
     <label class="f">Pronouns</label>
     <input type="text" id="fPro" value="${esc(m.pronouns)}" autocomplete="off" placeholder="they/them">
-    <label class="f">Colour</label>
-    <input type="color" id="fCol" value="${esc(m.color)}">
+    <label class="f">Colour &mdash; tap the swatch to pick</label>
+    <div class="colour-row">
+      <input type="color" id="fCol" value="${esc(m.color)}">
+      <span class="note">This is their colour everywhere: the dot by their name,
+      the front log, the board.</span>
+    </div>
     <label class="f">Roles</label>
     <div class="pill-pick" id="fRoles">${
       S.roles.length
@@ -608,10 +683,18 @@ function renderData(){
        copy out first — it may still be repairable.</p>
        <div class="btn-row"><button onclick="window.__rescue()">Download the raw copy</button></div></div>`
     : "";
+  // "1 roles" reads like a placeholder, and this line is the one that tells
+  // someone what the app is actually holding for them. Worth getting right.
+  const n = (c, one, many) => `${c} ${c === 1 ? one : (many || one + "s")}`;
   $("#stats").innerHTML =
-    `${S.members.length} members · ${S.members.filter(m=>m.dormant).length} in the void · ` +
-    `${S.roles.length} roles · ${S.bonds.length} relationships · ${S.fronts.length} front records` +
-    (openF ? ` · ${openF} fronting now` : "");
+    [ n(S.members.length, "member"),
+      `${S.members.filter(m=>m.dormant).length} in the void`,
+      n(S.roles.length, "role"),
+      n(S.labels.length, "label"),
+      n(S.bonds.length, "relationship"),
+      n(S.messages.length, "message"),
+      n(S.fronts.length, "front record")
+    ].join(" · ") + (openF ? ` · ${openF} fronting now` : "");
 
   $("#roleList").innerHTML = S.roles.length
     ? S.roles.map(r => `<div class="card"><div class="bond">
@@ -654,18 +737,14 @@ function importFile(file){
     if(!confirm(`Replace everything on this device with this file?\n\n${data.members.length} members.\nYour current data will be gone unless you exported it.`)) return;
     // Carry EVERYTHING through, including keys this version doesn't know about.
     // A future field must survive a round-trip through an older build.
-    const known = ["v","members","roles","bonds","fronts","labels","labelLog","lastBackup"];
-    const extra = Object.keys(data).filter(k => !known.includes(k));
-    S = Object.assign({}, data, {
-      v: 1,
-      members: data.members || [],
-      roles:   data.roles   || [],
-      bonds:   data.bonds   || [],
-      fronts:  data.fronts  || [],
-      labels:   data.labels   || [],
-      labelLog: data.labelLog || [],
-      lastBackup: data.lastBackup ?? null
-    });
+    // blank() is the single source of truth for the shape. Defaults first,
+    // the file's own values on top. Adding a collection to blank() therefore
+    // covers import automatically -- there is no hand-maintained key list to
+    // forget to update, which is how an old backup would otherwise load with
+    // a missing collection and throw on the tab that reads it.
+    const base = blank();
+    const extra = Object.keys(data).filter(k => !(k in base));
+    S = Object.assign(base, data, { v: 1 });
     save(); render();
     alert("Imported." + (extra.length
       ? "\n\nKept " + extra.length + " field(s) this version doesn't use yet: "
@@ -676,7 +755,8 @@ function importFile(file){
 }
 
 // --- routing ---------------------------------------------------------------
-const TITLES = {front:"Front", members:"Members", void:"The Void", bonds:"Bonds", data:"Data"};
+const TITLES = {front:"Front", members:"Members", void:"The Void",
+                board:"Board", bonds:"Bonds", data:"Data"};
 function route(){
   const tab = (location.hash || "#front").slice(1);
   const known = TITLES[tab] ? tab : "front";
@@ -691,7 +771,7 @@ window.addEventListener("hashchange", route);
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-open],[data-front],[data-filter],[data-save],[data-close],"
     + "[data-void],[data-role],[data-unbond],[data-savebond],[data-saverole],[data-unrole],"
-    + "[data-label],[data-savelabel],[data-unlabel]");
+    + "[data-label],[data-savelabel],[data-unlabel],[data-unmsg]");
   if(!t) return;
   const d = t.dataset;
 
@@ -714,6 +794,10 @@ document.addEventListener("click", e => {
     S.roles = S.roles.filter(r => r.id !== d.unrole);
     S.members.forEach(m => m.roles = m.roles.filter(r => r !== d.unrole));
     save(); render(); return;
+  }
+  if("unmsg"     in d){
+    if(!confirm("Remove this message? It is not kept anywhere else.")) return;
+    S.messages = S.messages.filter(x => x.id !== d.unmsg); save(); render(); return;
   }
   if("label"     in d) return toggleLabel(d.label);
   if("savelabel" in d){
@@ -743,6 +827,10 @@ $("#btnAddMember").addEventListener("click", () => memberSheet(null));
 $("#btnAddBond").addEventListener("click", bondSheet);
 $("#btnAddRole").addEventListener("click", roleSheet);
 $("#btnAddLabel").addEventListener("click", labelSheet);
+$("#btnPost").addEventListener("click", postMessage);
+$("#memberSearch").addEventListener("input", e => {
+  searchQuery = e.target.value; renderMembers();
+});
 $("#btnTheme").addEventListener("click", () => {
   const now = document.documentElement.getAttribute("data-theme");
   applyTheme(now === "light" ? "dark" : "light");
