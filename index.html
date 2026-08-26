@@ -299,7 +299,7 @@ function load(){
     return blank();
   }
   if(raw === null) return blank();       // genuinely nothing stored yet
-  try{ return JSON.parse(raw); }
+  try{ return Object.assign(blank(), JSON.parse(raw)); }
   catch(e){
     // Stored data IS there and is unreadable. Do not start fresh, do not save
     // over it. The raw string is intact until someone decides otherwise.
