@@ -10,8 +10,15 @@
 // no signal the fetch fails and the cached page answers immediately.
 //
 // Nothing here sends anything anywhere. It only caches this app's own files.
+//
+// The CACHE name is bumped on every release that changes a cached file. The
+// icons are safe because new artwork always gets a new filename - but the
+// MANIFEST cannot, it lives at a fixed path and is cache-first, so a stale
+// copy could hand Android the previous icon at install time. Renaming the
+// cache makes activate() delete the old one outright instead of relying on
+// addAll happening to overwrite in time.
 
-const CACHE = "system-v2";
+const CACHE = "system-v3";
 const FILES = [
   "./", "./index.html", "./manifest.webmanifest",
   "./icon-192-v3.png", "./icon-512-v3.png", "./icon-512-maskable-v3.png"
@@ -26,6 +33,18 @@ self.addEventListener("activate", e => {
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
+  );
+});
+
+// Tapping the "who's fronting" notification should open the app, not a new
+// copy of it. Focus an existing window if one is already open.
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({type: "window", includeUncontrolled: true}).then(list => {
+      for (const c of list) if ("focus" in c) return c.focus();
+      if (self.clients.openWindow) return self.clients.openWindow("./index.html");
+    })
   );
 });
 

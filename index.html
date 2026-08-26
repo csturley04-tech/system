@@ -146,6 +146,10 @@
   .msg-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
   .msg-head .when{font-size:.72rem;color:var(--ink-3)}
   .msg-body{white-space:pre-wrap;font-size:.95rem;line-height:1.6}
+  .ph{background-size:cover;background-position:center;color:transparent}
+  .bar{height:6px;border-radius:3px;background:var(--line);margin:5px 0 4px;overflow:hidden}
+  .bar span{display:block;height:100%;border-radius:3px}
+  .pct{font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:.85rem;flex:0 0 auto}
   .colour-row{display:flex;gap:12px;align-items:flex-start}
   .colour-row input[type=color]{flex:0 0 auto;width:60px;height:44px}
   #memberSearch{margin-bottom:4px}
@@ -237,6 +241,18 @@
       <input type="file" id="fileIn" accept="application/json,.json" class="hide">
     </div>
 
+    <h2 class="sec">Who's out most</h2>
+    <div class="card" style="padding-bottom:6px">
+      <label class="f">Over</label>
+      <select id="statsWin">
+        <option value="604800000">the last 7 days</option>
+        <option value="2592000000">the last 30 days</option>
+        <option value="0">all time</option>
+      </select>
+    </div>
+    <div id="statsList"></div>
+    <p class="note" id="statsNote" style="margin-top:8px"></p>
+
     <h2 class="sec">Roles</h2>
     <div id="roleList"></div>
     <div class="btn-row"><button id="btnAddRole" class="full">Add a role</button></div>
@@ -244,6 +260,9 @@
     <h2 class="sec">Labels</h2>
     <div id="labelList"></div>
     <div class="btn-row"><button id="btnAddLabel" class="full">Add a label</button></div>
+
+    <h2 class="sec">Pin who's fronting</h2>
+    <div id="pinBox"></div>
 
     <h2 class="sec">Where this lives</h2>
     <p class="note">
@@ -350,6 +369,51 @@ const role   = id => S.roles.find(r => r.id === id);
 const living = () => S.members.filter(m => !m.dormant);
 const initial = n => (n.trim()[0] || "?").toUpperCase();
 
+// A member may have no icon at all. Old backups have no such field, and the
+// shape guard in blank() only covers TOP-LEVEL collections - it says nothing
+// about fields inside one. So every read of m.icon tolerates undefined here,
+// in one place, rather than at each call site.
+//
+// The regex is not decoration. Import accepts an arbitrary JSON file and this
+// value gets interpolated into a CSS url(). Anything that is not plain base64
+// image data is dropped rather than rendered.
+const ICON_OK = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+const iconOf = m => (m && typeof m.icon === "string" && ICON_OK.test(m.icon)) ? m.icon : null;
+
+function avatar(m, px){
+  const s2 = px || 38, ic = iconOf(m);
+  const box = `width:${s2}px;height:${s2}px;font-size:${Math.round(s2*0.42)}px`;
+  return ic
+    ? `<div class="dot ph" style="${box};background-image:url(&quot;${ic}&quot;)"></div>`
+    : `<div class="dot" style="${box};background:${esc(m.color)}">${esc(initial(m.name))}</div>`;
+}
+
+// Photos never go in at full size. A phone picture is 3-6MB and localStorage
+// is about 5MB for the WHOLE app - one unshrunk image would not just fail to
+// save itself, it would stop members, fronts and history saving too. So the
+// original is read, centre-cropped, drawn small, and only the small version
+// is ever kept.
+function shrinkImage(file, px, cb){
+  const fr = new FileReader();
+  fr.onerror = () => cb(null);
+  fr.onload = () => {
+    const img = new Image();
+    img.onerror = () => cb(null);
+    img.onload = () => {
+      try{
+        const side = Math.min(img.width, img.height);
+        const c = document.createElement("canvas");
+        c.width = c.height = px;
+        const g = c.getContext("2d");
+        g.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, px, px);
+        cb(c.toDataURL("image/jpeg", 0.82));
+      }catch(e){ cb(null); }
+    };
+    img.src = fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+
 function when(ts){
   const d = new Date(ts), now = new Date();
   const sameDay = d.toDateString() === now.toDateString();
@@ -377,14 +441,14 @@ sheet.addEventListener("click", e => { if(e.target === sheet) closeSheet(); });
 // --- render ----------------------------------------------------------------
 function render(){
   renderFront(); renderLabels(); renderMembers(); renderVoid();
-  renderBoard(); renderBonds(); renderData();
+  renderBoard(); renderBonds(); renderStats(); renderPin(); renderData();
   const n = living().length;
   $("#count").textContent = n + (n === 1 ? " member" : " members");
 }
 
 function memberRow(m, onclick){
   return `<div class="card"><div class="m-row" data-open="${m.id}">
-    <div class="dot" style="background:${esc(m.color)}">${esc(initial(m.name))}</div>
+    ${avatar(m)}
     <div>
       <div class="m-name">${esc(m.name)}</div>
       <div class="m-sub">${esc(m.pronouns || "—")}</div>
@@ -401,7 +465,10 @@ function renderFront(){
   $("#frontNow").innerHTML = open.length
     ? `<div class="front-now">` + open.map(f => {
         const m = member(f.memberId); if(!m) return "";
-        return `<span class="front-chip"><span class="d" style="background:${esc(m.color)}"></span>
+        const ic = iconOf(m);
+        return `<span class="front-chip">${ic
+            ? `<span class="d ph" style="background-image:url(&quot;${ic}&quot;)"></span>`
+            : `<span class="d" style="background:${esc(m.color)}"></span>`}
           ${esc(m.name)} <span style="color:var(--ink-3);font-size:.78rem">${dur(f.start)}</span></span>`;
       }).join("") + `</div>`
     : `<div class="empty">Nobody marked as fronting.</div>`;
@@ -439,7 +506,9 @@ function renderBoard(){
         const col = m ? m.color : "var(--ink-3)";
         return `<div class="card msg">
           <div class="msg-head">
-            <span class="d dot" style="width:18px;height:18px;background:${esc(col)}"></span>
+            ${m && iconOf(m)
+              ? `<span class="d ph" style="width:18px;height:18px;background-image:url(&quot;${iconOf(m)}&quot;)"></span>`
+              : `<span class="d dot" style="width:18px;height:18px;background:${esc(col)}"></span>`}
             <strong>${esc(m ? m.name : "unsigned")}</strong>
             <span class="when">${esc(when(msg.at))}</span>
             <button class="btn-ghost btn-danger" style="margin-left:auto;padding:2px 8px;font-size:.72rem"
@@ -517,7 +586,7 @@ function toggleFront(id){
   const open = S.fronts.find(f => f.memberId === id && !f.end);
   if(open) open.end = Date.now();
   else S.fronts.push({id: uid(), memberId: id, start: Date.now(), end: null});
-  save(); render(); frontSheet();
+  save(); render(); updatePin(); frontSheet();
 }
 
 /* ---- members ---- */
@@ -581,6 +650,20 @@ function memberSheet(id){
       <span class="note">This is their colour everywhere: the dot by their name,
       the front log, the board.</span>
     </div>
+
+    <label class="f">Photo &mdash; optional</label>
+    <div class="colour-row">
+      <div id="icPrev">${avatar(m, 60)}</div>
+      <div>
+        <div class="btn-row" style="margin-top:0">
+          <button type="button" id="btnPickIcon">Choose a photo</button>
+          <button type="button" class="btn-ghost btn-danger" id="btnDropIcon">Remove</button>
+        </div>
+        <span class="note">Shrunk to a small square on this device before it is saved.
+        The full-size original is never stored and never leaves the phone.</span>
+      </div>
+      <input type="file" id="fIcon" accept="image/*" class="hide">
+    </div>
     <label class="f">Roles</label>
     <div class="pill-pick" id="fRoles">${
       S.roles.length
@@ -598,6 +681,22 @@ function memberSheet(id){
       profile, bonds, notes, history. They just leave the main list.</p>` : ""}`);
   // remember role toggles locally in the sheet
   sheetBody.dataset.roles = JSON.stringify(m.roles);
+  sheetBody.dataset.icon  = iconOf(m) || "";
+  $("#btnPickIcon").addEventListener("click", () => $("#fIcon").click());
+  $("#btnDropIcon").addEventListener("click", () => {
+    sheetBody.dataset.icon = "";
+    $("#icPrev").innerHTML = avatar({name: $("#fName").value || "?",
+                                     color: $("#fCol").value}, 60);
+  });
+  $("#fIcon").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0];
+    if(!f) return;
+    shrinkImage(f, 128, data => {
+      if(!data){ alert("That image couldn't be read. Try a different one."); return; }
+      sheetBody.dataset.icon = data;
+      $("#icPrev").innerHTML = avatar({name: "", color: "#000", icon: data}, 60);
+    });
+  });
 }
 
 function saveMember(id){
@@ -608,15 +707,80 @@ function saveMember(id){
     const m = member(id);
     Object.assign(m, {
       name, pronouns: $("#fPro").value.trim(), color: $("#fCol").value,
-      roles, note: $("#fNote").value
+      roles, note: $("#fNote").value, icon: sheetBody.dataset.icon || null
     });
   } else {
     S.members.push({
       id: uid(), name, pronouns: $("#fPro").value.trim(), color: $("#fCol").value,
-      roles, note: $("#fNote").value, dormant: false, created: Date.now()
+      roles, note: $("#fNote").value, icon: sheetBody.dataset.icon || null,
+      dormant: false, created: Date.now()
     });
   }
   save(); closeSheet(); render();
+}
+
+/* ---- how much each person is out ---- */
+
+// Overlapping fronts are the normal case here, not an edge case: co-fronting
+// means two people can both be out for the same hour. That is two member-hours
+// in one clock-hour, so these shares deliberately do NOT sum to 100%. Saying so
+// on screen is cheaper than someone reading it as a bug.
+let statsWindow = 7 * 86400000;
+
+function frontTotals(windowMs){
+  const now = Date.now(), from = windowMs ? now - windowMs : 0;
+  const acc = new Map();
+  S.fronts.forEach(f => {
+    const end = f.end || now;          // still out? count up to right now
+    if(end <= from) return;            // finished before the window opened
+    const ms = end - Math.max(f.start, from);   // clip to the window
+    if(ms <= 0) return;
+    const a = acc.get(f.memberId) || {ms:0, times:0, longest:0};
+    a.ms += ms; a.times += 1; if(ms > a.longest) a.longest = ms;
+    acc.set(f.memberId, a);
+  });
+  return acc;
+}
+
+function span(ms){
+  const min = Math.round(ms/60000);
+  if(min < 60) return min + "m";
+  const h = Math.floor(min/60);
+  if(h < 24) return h + "h " + (min%60) + "m";
+  return Math.floor(h/24) + "d " + (h%24) + "h";
+}
+
+function renderStats(){
+  const pick = $("#statsWin");
+  if(pick) [...pick.options].forEach(o => o.selected = (Number(o.value) === statsWindow));
+
+  const acc = frontTotals(statsWindow);
+  const rows = [...acc.entries()]
+    .map(([id, a]) => ({m: member(id), a}))
+    .filter(r => r.m)
+    .sort((x, y) => y.a.ms - x.a.ms);
+  const total = rows.reduce((t, r) => t + r.a.ms, 0);
+
+  $("#statsList").innerHTML = rows.length
+    ? rows.map(r => {
+        const pct = total ? Math.round(r.a.ms / total * 100) : 0;
+        return `<div class="card"><div class="m-row">
+          ${avatar(r.m, 30)}
+          <div style="flex:1;min-width:0">
+            <div class="m-name">${esc(r.m.name)}</div>
+            <div class="bar"><span style="width:${pct}%;background:${esc(r.m.color)}"></span></div>
+            <div class="m-sub">${esc(span(r.a.ms))} &middot; ${r.a.times}
+              ${r.a.times === 1 ? "time out" : "times out"} &middot;
+              longest ${esc(span(r.a.longest))}</div>
+          </div>
+          <div class="pct">${pct}%</div>
+        </div></div>`;
+      }).join("")
+    : `<div class="empty">No fronting recorded in this window yet.</div>`;
+
+  $("#statsNote").textContent = rows.length > 1
+    ? "Share of total front time. Co-fronting counts for everyone who was out, so two people out for the same hour is two hours here."
+    : "";
 }
 
 /* ---- void ---- */
@@ -631,7 +795,84 @@ function toggleVoid(id){
   const m = member(id);
   m.dormant = !m.dormant;
   if(m.dormant) S.fronts.filter(f => f.memberId === id && !f.end).forEach(f => f.end = Date.now());
-  save(); closeSheet(); render();
+  save(); closeSheet(); render(); updatePin();
+}
+
+/* ---- the pinned notification ---- */
+
+// What this can and cannot do, written down so nobody has to rediscover it:
+//
+// CAN    show who is fronting, sit in the notification shade, and be REPLACED
+//        in place when it changes (same tag), without a stack building up.
+// CANNOT be undismissable. A true ongoing notification needs a native Android
+//        foreground service; a web app is not allowed one. It can be swiped off.
+// CANNOT survive a reboot, or update while the app is closed - there is no
+//        server and no push. It refreshes when the app is opened or the front
+//        changes, which is the only moment it actually needs to.
+const PIN_KEY = "system-app-pin";
+const pinOn = () => { try{ return localStorage.getItem(PIN_KEY) === "1"; }catch(e){ return false; } };
+
+function updatePin(){
+  if(!pinOn() || !("serviceWorker" in navigator) || !("Notification" in window)) return;
+  if(Notification.permission !== "granted") return;
+  const out = S.fronts.filter(f => !f.end).map(f => member(f.memberId)).filter(Boolean);
+  navigator.serviceWorker.ready.then(reg => {
+    reg.showNotification(out.length ? "Fronting now" : "Nobody marked as fronting", {
+      body: out.length ? out.map(m => m.name).join(", ") : "Open the app to set who's out.",
+      tag: "front-now",        // same tag = replace in place, never stack
+      renotify: false,         // replacing should not buzz
+      silent: true,
+      icon: "./icon-192-v3.png",
+      badge: "./icon-192-v3.png"
+    });
+  }).catch(() => {});
+}
+
+function clearPin(){
+  if(!("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.ready
+    .then(reg => reg.getNotifications({tag: "front-now"}))
+    .then(ns => ns.forEach(n => n.close()))
+    .catch(() => {});
+}
+
+function renderPin(){
+  const box = $("#pinBox");
+  if(!box) return;
+  if(!("Notification" in window) || !("serviceWorker" in navigator)){
+    box.innerHTML = `<p class="note">This browser can't show notifications.</p>`;
+    return;
+  }
+  if(Notification.permission === "denied"){
+    box.innerHTML = `<p class="note">Notifications are blocked for this app in your phone's
+      settings. That has to be changed there - once it's been refused the app isn't allowed
+      to ask again.</p>`;
+    return;
+  }
+  box.innerHTML = `<div class="btn-row" style="margin-top:0">
+      <button id="btnPin" class="${pinOn() ? "" : "btn-primary"}">${
+        pinOn() ? "Stop pinning" : "Pin who's fronting"}</button>
+    </div>
+    <p class="note">Shows who's out in your notification shade and updates when you switch.
+    It can still be swiped away, and it won't come back on its own after a restart - a web
+    app isn't allowed a permanent one.</p>`;
+  const b = $("#btnPin");
+  if(b) b.addEventListener("click", togglePin);
+}
+
+function togglePin(){
+  if(pinOn()){
+    try{ localStorage.setItem(PIN_KEY, "0"); }catch(e){}
+    clearPin(); renderPin(); return;
+  }
+  const go = () => {
+    try{ localStorage.setItem(PIN_KEY, "1"); }catch(e){}
+    updatePin(); renderPin();
+  };
+  if(Notification.permission === "granted") return go();
+  Notification.requestPermission().then(r => {
+    if(r === "granted") go(); else renderPin();
+  }).catch(() => renderPin());
 }
 
 /* ---- bonds ---- */
@@ -828,6 +1069,9 @@ $("#btnAddBond").addEventListener("click", bondSheet);
 $("#btnAddRole").addEventListener("click", roleSheet);
 $("#btnAddLabel").addEventListener("click", labelSheet);
 $("#btnPost").addEventListener("click", postMessage);
+$("#statsWin").addEventListener("change", e => {
+  statsWindow = Number(e.target.value); renderStats();
+});
 $("#memberSearch").addEventListener("input", e => {
   searchQuery = e.target.value; renderMembers();
 });
